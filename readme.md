@@ -51,6 +51,7 @@ approximator = Polynomial(deg=2)
 appr_x, appr_y = approximator.approximate(x, y)
 # Вывод формулы для латеха
 print(approximator.label('t', 'x'))
+# >>> $y = 1.03t^{2}-0.205t+0.158$
 
 № Построение графика. Параметры говорят сами за себя
 pretty_plot(appr_x, appr_y, axes=ax, points=False, line=True,
