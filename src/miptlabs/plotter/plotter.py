@@ -39,7 +39,7 @@ def _get_default_params():
     params['yticks_fontsize'] = 16
     params['xlabel_fontsize'] = 22
     params['ylabel_fontsize'] = 22
-    params['legend_fontsize'] = 22
+    params['legend_fontsize'] = 20
     params['title_fontsize'] = 26
 
     return params
