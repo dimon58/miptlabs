@@ -7,6 +7,25 @@ class NothingDrawError(Exception):
         self.txt = text
 
 
+class LEGEND_FROM_APPROXIMATOR:
+    ...
+
+
+def _make_tuples_from_none(*tuples, length=1):
+    """
+    Делает из None кортеж длиной length, если передан не None, то оставляет его, как есть
+    """
+    result = []
+    for tuple_ in tuples:
+        if tuple_ is None:
+            result.append(tuple([None] * length))
+
+        else:
+            result.append(tuple_)
+
+    return result
+
+
 def _set_ticks_fontsize(axes, xfontsize, yfontsize):
     """
     Устанавливает размер шрифта подписям по осям
@@ -55,7 +74,8 @@ def _update_params(params, kwargs):
     targets = ('figsize', 'dpi', 'legend_loc',
                'xticks_fontsize', 'yticks_fontsize',
                'xlabel_fontsize', 'ylabel_fontsize',
-               'legend_fontsize', 'title_fontsize')
+               'legend_fontsize', 'title_fontsize',
+               'LEGEND_FROM_APPROXIMATOR')
 
     for target in targets:
         if target in kwargs:
@@ -93,13 +113,81 @@ def _set_font_params(axes, params, xlabel, ylabel, title):
     axes.set_title(title, fontsize=params['title_fontsize'])
 
 
-def _draw(axes, x, y, xerr, yerr, color, legend, points, line):
+def _get_axes(axes, params, minot_ticks):
+    """
+    Создаёт новые объект графика и фигуры, если axes=None
+    Возвращает текущие оси, если они не None
+    """
+    if axes is None:
+        figure, axes = plt.subplots(figsize=params['figsize'], dpi=params['dpi'])
+        if minot_ticks:
+            _enable_minor_ticks(axes)
+
+    return axes
+
+
+def _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerr, yerr, approximator, kwargs):
+    _check_correct_input(points, line, xerr, yerr, approximator)
+
+    # Инициализирует параметры
+    params = _get_default_params()
+
+    # Обновляет параметры
+    _update_params(params, kwargs)
+
+    # Создаёт новые объект графика и фигуры, если не переданы существующие
+    axes = _get_axes(axes, params, minor_ticks)
+
+    # ----------------Шрифты----------------
+    _set_font_params(axes, params, xlabel, ylabel, title)
+
+    return axes, params
+
+
+def _check_correct_input(points, line, xerr, yerr, approximator):
+    """
+    Проверяет, может ли что-то нарисоваться.
+    Если нет, то выбрасывает исключение NothingDrawError
+    :param points:
+    :param line:
+    :param xerr:
+    :param yerr:
+    :return:
+    """
+    if not points and not line and not xerr and not yerr and not approximator:
+        raise NothingDrawError("Хотя бы один из параметров points, line, xerr, yerr должен быть True,"
+                               " чтобы что-то нарисовалось")
+
+
+def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, params):
+    """
+    Сама функция рисования
+    """
     # Устанавливает стандартный цвет, если не передан другой
     if color is None:
         color = _get_default_color()
 
     # Нужно для костыля, чтобы легенда отрисовыволась лишь один раз
     label = legend
+
+    if approximator:
+        x_, y_ = approximator.approximate(x, y)
+        print(params)
+        if params.get("LEGEND_FROM_APPROXIMATOR"):
+            print(798987657890)
+            xvar = 'x'
+            yvar = 'y'
+
+            if 'xvar' in params:
+                xvar = params['xvar']
+            if 'yvar' in params:
+                yvar = params['yvar']
+
+            app_label = approximator.label(xvar, yvar)
+        else:
+            app_label = None
+        print(app_label)
+        axes.plot(x_, y_, c=color, label=app_label)
 
     # Рисует точки, если нужно
     if points:
@@ -119,56 +207,10 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line):
     return axes
 
 
-def _get_axes(axes, params, minot_ticks):
-    """
-    Создаёт новые объект графика и фигуры, если axes=None
-    Возвращает текущие оси, если они не None
-    """
-    if axes is None:
-        figure, axes = plt.subplots(figsize=params['figsize'], dpi=params['dpi'])
-        if minot_ticks:
-            _enable_minor_ticks(axes)
-
-    return axes
-
-
-def _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerr, yerr, kwargs):
-    _check_correct_input(points, line, xerr, yerr)
-
-    # Инициализирует параметры
-    params = _get_default_params()
-
-    # Обновляет параметры
-    _update_params(params, kwargs)
-
-    # Создаёт новые объект графика и фигуры, если не переданы существующие
-    axes = _get_axes(axes, params, minor_ticks)
-
-    # ----------------Шрифты----------------
-    _set_font_params(axes, params, xlabel, ylabel, title)
-
-    return axes, params
-
-
-def _check_correct_input(points, line, xerr, yerr):
-    """
-    Проверяет, может ли что-то нарисоваться.
-    Если нет, то выбрасывает исключение NothingDrawError
-    :param points:
-    :param line:
-    :param xerr:
-    :param yerr:
-    :return:
-    """
-    if not points and not line and not xerr and not yerr:
-        raise NothingDrawError("Хотя бы один из параметров points, line, xerr, yerr должен быть True,"
-                               " чтобы что-то нарисовалось")
-
-
 def pretty_plot(x, y, xerr=None, yerr=None,
                 xlabel=None, ylabel=None, title=None, legend=None,
                 minor_ticks=True, color=None, points=True, line=False,
-                axes=None, **kwargs):
+                axes=None, approximator=None, **kwargs):
     """
     Рисует график, с требованиями лабников.
     По умолчания не соединяет точки
@@ -186,11 +228,12 @@ def pretty_plot(x, y, xerr=None, yerr=None,
     :param ylabel: подпись по оси y
     :param title: название графика
     :param legend: легенда
-    :param minot_ticks: нужна ли впсомогательная сетка
+    :param minor_ticks: нужна ли впсомогательная сетка
     :param color: цвет графика. Если None, то будет синий
     :param points: нужно ли рисвоать точки
     :param line: нужно ли соединить ломаной все точки
     :param axes: объект графика. Можно ппередать, чтобы дорисовать всё на существующем графике
+    :param approximator: аппроксиматор для точек, должен быть экземпляром класса Approximator
     :param kwargs: дополнительные агрменты:
     :Keyword Arguments:
     * *figsize* (``tuple[int]``) --
@@ -211,41 +254,40 @@ def pretty_plot(x, y, xerr=None, yerr=None,
       размер шрифта заголовка, по умолчанию 26
     * *legend_fontsize* (``int``) --
       размер шрифта легенды, по умолчанию 22
+    * *LEGEND_FROM_APPROXIMATOR* (``int``) --
+      если передано True, то рисует легенду ещё из аппроксиматора
     :return: объект только что нарисованного графика
     """
 
     # ----------------Инициализация----------------
-    axes, params = _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerr, yerr, kwargs)
+    axes, params = _prepare(
+        axes=axes,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        title=title,
+        minor_ticks=minor_ticks,
+        points=points,
+        line=line,
+        xerr=xerr,
+        yerr=yerr,
+        approximator=approximator,
+        kwargs=kwargs
+    )
 
     # ----------------Рисование----------------
-    _draw(axes, x, y, xerr, yerr, color, legend, points, line)
+    _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, params)
 
     # Рисует легенду, если нужно
-    if legend:
+    if legend or params.get("LEGEND_FROM_APPROXIMATOR"):
         axes.legend(loc=params['legend_loc'], fontsize=params['legend_fontsize'])
 
     return axes
 
 
-def _make_tuples_from_none(*tuples, length=1):
-    """
-    Делает из None кортеж длиной length, если передан не None, то оставляет его, как есть
-    """
-    result = []
-    for tuple_ in tuples:
-        if tuple_ is None:
-            result.append(tuple([None] * length))
-
-        else:
-            result.append(tuple_)
-
-    return result
-
-
 def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
                      xlabel=None, ylabel=None, title=None, legends=None,
                      minor_ticks=True, colors=None, points=True, line=False,
-                     axes=None, **kwargs):
+                     axes=None, approximator=None, **kwargs):
     r"""
     :param xs: наборы координат по оси x
     :param ys: наборы координат по оси y
@@ -257,11 +299,12 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
     :param ylabel: наборы подписей по оси y
     :param title: название графика
     :param legends: легенды
-    :param minot_ticks: нужна ли впсомогательная сетка
+    :param minor_ticks: нужна ли впсомогательная сетка
     :param colors: наборы цветов графика. Если None, то будет синий
     :param points: нужно ли рисвоать точки
     :param line: нужно ли соединить ломаной все точки
-    :param axes: объект графика. Можно ппередать, чтобы дорисовать всё на существующем графике
+    :param axes: объект графика. Можно передать, чтобы дорисовать всё на существующем графике
+    :param approximator: аппроксиматор для точек, должен быть экземпляром класса Approximator
     :param kwargs: дополнительные агрменты:
     :Keyword Arguments:
     * *figsize* (``tuple[int]``) --
@@ -282,21 +325,35 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
       размер шрифта заголовка, по умолчанию 26
     * *legend_fontsize* (``int``) --
       размер шрифта легенды, по умолчанию 22
+    * *LEGEND_FROM_APPROXIMATOR* (``int``) --
+      если передано True, то рисует легенду ещё из аппроксиматора
     :return: объект только что нарисованного графика
     """
 
     # ----------------Инициализация----------------
-    axes, params = _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerrs, yerrs, kwargs)
+    axes, params = _prepare(
+        axes=axes,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        title=title,
+        minor_ticks=minor_ticks,
+        points=points,
+        line=line,
+        xerr=xerrs,
+        yerr=yerrs,
+        approximator=approximator,
+        kwargs=kwargs
+    )
 
     # Создаём кортежы из None длины = количеству графиков
     legends, colors, xerrs, yerrs = _make_tuples_from_none(legends, colors, xerrs, yerrs)
 
     # ----------------Рисование----------------
     for num, (x, y, xerr, yerr, legend, color) in enumerate(zip(xs, ys, xerrs, yerrs, legends, colors)):
-        _draw(axes, x, y, xerr, yerr, color, legend, points, line)
+        _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, params)
 
     # Рисует легенду, если нужно
-    if legends:
+    if legends or params.get("LEGEND_FROM_APPROXIMATOR"):
         axes.legend(loc=params['legend_loc'], fontsize=params['legend_fontsize'])
 
     return axes
