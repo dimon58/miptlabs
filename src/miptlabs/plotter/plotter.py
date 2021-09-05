@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 
@@ -84,9 +83,91 @@ def _enable_minor_ticks(axes):
     axes.grid(which='minor', color='k', linestyle=':')
 
 
+def _set_font_params(axes, params, xlabel, ylabel, title):
+    # Устанавливает размер шрифта для подписей по осям
+    _set_ticks_fontsize(axes, params['xticks_fontsize'], params['yticks_fontsize'])
+
+    # Устанавливает размер шрифта для разных элементов
+    axes.set_xlabel(xlabel, fontsize=params['xlabel_fontsize'])
+    axes.set_ylabel(ylabel, fontsize=params['ylabel_fontsize'])
+    axes.set_title(title, fontsize=params['title_fontsize'])
+
+
+def _draw(axes, x, y, xerr, yerr, color, legend, points, line):
+    # Устанавливает стандартный цвет, если не передан другой
+    if color is None:
+        color = _get_default_color()
+
+    # Нужно для костыля, чтобы легенда отрисовыволась лишь один раз
+    label = legend
+
+    # Рисует точки, если нужно
+    if points:
+        axes.scatter(x, y, c=color, label=label)
+        label = None
+
+    # Рисует кресты погрешностей, если нужно
+    if xerr or yerr:
+        axes.errorbar(x, y, fmt='none', xerr=xerr, yerr=yerr, c=color, label=label)
+        label = None
+
+    # Соединяет точки ломаной, если нужно
+    if line:
+        axes.plot(x, y, c=color, label=label)
+        label = None
+
+    return axes
+
+
+def _get_axes(axes, params, minot_ticks):
+    """
+    Создаёт новые объект графика и фигуры, если axes=None
+    Возвращает текущие оси, если они не None
+    """
+    if axes is None:
+        figure, axes = plt.subplots(figsize=params['figsize'], dpi=params['dpi'])
+        if minot_ticks:
+            _enable_minor_ticks(axes)
+
+    return axes
+
+
+def _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerr, yerr, kwargs):
+    _check_correct_input(points, line, xerr, yerr)
+
+    # Инициализирует параметры
+    params = _get_default_params()
+
+    # Обновляет параметры
+    _update_params(params, kwargs)
+
+    # Создаёт новые объект графика и фигуры, если не переданы существующие
+    axes = _get_axes(axes, params, minor_ticks)
+
+    # ----------------Шрифты----------------
+    _set_font_params(axes, params, xlabel, ylabel, title)
+
+    return axes, params
+
+
+def _check_correct_input(points, line, xerr, yerr):
+    """
+    Проверяет, может ли что-то нарисоваться.
+    Если нет, то выбрасывает исключение NothingDrawError
+    :param points:
+    :param line:
+    :param xerr:
+    :param yerr:
+    :return:
+    """
+    if not points and not line and not xerr and not yerr:
+        raise NothingDrawError("Хотя бы один из параметров points, line, xerr, yerr должен быть True,"
+                               " чтобы что-то нарисовалось")
+
+
 def pretty_plot(x, y, xerr=None, yerr=None,
                 xlabel=None, ylabel=None, title=None, legend=None,
-                minot_ticks=True, color=None, points=True, line=False,
+                minor_ticks=True, color=None, points=True, line=False,
                 axes=None, **kwargs):
     """
     Рисует график, с требованиями лабников.
@@ -133,58 +214,11 @@ def pretty_plot(x, y, xerr=None, yerr=None,
     :return: объект только что нарисованного графика
     """
 
-    if not points and not line and not xerr and not yerr:
-        raise NothingDrawError("Хотябы один из параметров points, line, xerr, yerr должен быть True,"
-                               " чтобы что-то нарисовалось")
-
     # ----------------Инициализация----------------
-
-    # Инициализирует параметры
-    params = _get_default_params()
-
-    # Обновляет параметры
-    _update_params(params, kwargs)
-
-    # Устанавливает стандартный цвет, если не передан другой
-    if color is None:
-        color = _get_default_color()
-
-    # Создаёт новые объект графика и фигуры, если не переданы существующие
-    if axes is None:
-        figure, axes = plt.subplots(figsize=params['figsize'], dpi=params['dpi'])
-        axes: Axes = axes
-        if minot_ticks:
-            _enable_minor_ticks(axes)
+    axes, params = _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerr, yerr, kwargs)
 
     # ----------------Рисование----------------
-
-    # Нужно для костыля, чтобы легенда отрисовыволась лишь один раз
-    label = legend
-
-    # Рисует точки, если нужно
-    if points:
-        axes.scatter(x, y, c=color, label=label)
-        label = None
-
-    # Рисует кресты погрешностей, если нужно
-    if xerr or yerr:
-        axes.errorbar(x, y, fmt='none', xerr=xerr, yerr=yerr, c=color, label=label)
-        label = None
-
-    # Соединяет точки ломаной, если нужно
-    if line:
-        axes.plot(x, y, c=color, label=label)
-        label = None
-
-    # ----------------Шрифты----------------
-
-    # Устанавливает размер шрифта для подписей по осям
-    _set_ticks_fontsize(axes, params['xticks_fontsize'], params['yticks_fontsize'])
-
-    # Устанавливает размер шрифта для разных элементов
-    axes.set_xlabel(xlabel, fontsize=params['xlabel_fontsize'])
-    axes.set_ylabel(ylabel, fontsize=params['ylabel_fontsize'])
-    axes.set_title(title, fontsize=params['title_fontsize'])
+    _draw(axes, x, y, xerr, yerr, color, legend, points, line)
 
     # Рисует легенду, если нужно
     if legend:
@@ -193,9 +227,24 @@ def pretty_plot(x, y, xerr=None, yerr=None,
     return axes
 
 
+def _make_tuples_from_none(*tuples, length=1):
+    """
+    Делает из None кортеж длиной length, если передан не None, то оставляет его, как есть
+    """
+    result = []
+    for tuple_ in tuples:
+        if tuple_ is None:
+            result.append(tuple([None] * length))
+
+        else:
+            result.append(tuple_)
+
+    return result
+
+
 def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
                      xlabel=None, ylabel=None, title=None, legends=None,
-                     minot_ticks=True, colors=None, points=True, line=False,
+                     minor_ticks=True, colors=None, points=True, line=False,
                      axes=None, **kwargs):
     r"""
     :param xs: наборы координат по оси x
@@ -237,66 +286,18 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
     """
 
     # ----------------Инициализация----------------
-
-    # Инициализирует параметры
-    params = _get_default_params()
-
-    # Обновляет параметры
-    _update_params(params, kwargs)
-
-    # Создаёт новые объект графика и фигуры, если не переданы существующие
-    if axes is None:
-        figure, axes = plt.subplots(figsize=params['figsize'], dpi=params['dpi'])
-
-        if minot_ticks:
-            _enable_minor_ticks(axes)
+    axes, params = _prepare(axes, xlabel, ylabel, title, minor_ticks, points, line, xerrs, yerrs, kwargs)
 
     # Создаём кортежы из None длины = количеству графиков
-
-    if legends is None:
-        legends = tuple([None] * len(xs))
-
-    if colors is None:
-        colors = tuple([None] * len(xs))
-
-    if xerrs is None:
-        xerrs = tuple([None] * len(xs))
-
-    if yerrs is None:
-        yerrs = tuple([None] * len(xs))
+    legends, colors, xerrs, yerrs = _make_tuples_from_none(legends, colors, xerrs, yerrs)
 
     # ----------------Рисование----------------
-
     for num, (x, y, xerr, yerr, legend, color) in enumerate(zip(xs, ys, xerrs, yerrs, legends, colors)):
-
-        # Устанавливает стандартный цвет, если не передан другой
-        if color is None:
-            color = _get_default_color(num)
-
-        # Рисует точки, если нужно
-        if points:
-            axes.scatter(x, y, c=color, label=legend)
-
-        # Рисует кресты погрешностей
-        axes.errorbar(x, y, fmt='none', xerr=xerr, yerr=yerr, c=color)
-
-        # Соединяет точки ломаной, если нужно
-        if line:
-            axes.plot(x, y, c=color)
-
-    # ----------------Шрифты----------------
-
-    # Устанавливает размер шрифта для подписей по осям
-    _set_ticks_fontsize(axes, params['xticks_fontsize'], params['yticks_fontsize'])
-
-    # Устанавливает размер шрифта для разных элементов
-    axes.set_xlabel(xlabel, fontsize=params['xlabel_fontsize'])
-    axes.set_ylabel(ylabel, fontsize=params['ylabel_fontsize'])
-    axes.set_title(title, fontsize=params['title_fontsize'])
+        _draw(axes, x, y, xerr, yerr, color, legend, points, line)
 
     # Рисует легенду, если нужно
     if legends:
-        axes.legend(loc='best', fontsize=params['legend_fontsize'], )
+        axes.legend(loc=params['legend_loc'], fontsize=params['legend_fontsize'])
 
     return axes
 
