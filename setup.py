@@ -1,6 +1,6 @@
 import setuptools
 
-with open("README.md", "r", encoding="utf-8") as fh:
+with open("readme.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r", encoding="utf-8") as fh:
@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='miptlabs',
-    version='1.0.6',
+    version='1.0.7',
     author="Dmitry",
     description="The package will help MIPT students to draw graphs easier",
     long_description=long_description,
@@ -17,6 +17,10 @@ setuptools.setup(
     project_urls={
         "Bug Tracker": "https://github.com/dimon58/miptlabs/issues",
     },
+    data_files=[
+        'readme.md',
+        'requirements.txt'
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

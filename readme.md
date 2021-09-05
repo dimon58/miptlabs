@@ -1,5 +1,12 @@
 # Длинное описание, которое когда-то появится #
 
+Для сборки:
+
+```sh
+python -m pip install --upgrade build wheel
+python -m build --no-isolation
+```
+
 Для установки:
 
 `pip install -i https://test.pypi.org/simple/ miptlabs`
@@ -20,18 +27,16 @@ show()
 
 ![base_graph](examples/base.png)
 
-
 Точки можно просто соединить написав line=True:
- 
+
 ```
 pretty_plot(x, y, line=True, legend='$y = x^2$')
 ```
 
 ![with_line_graph](examples/with_line.png)
 
-
-Так как для данный с лаб простое соединение вряд ли подойдет, то в пакете есть разные апроксиматоры
-Для примера можно взять зависимость координаты от рвемени при равноускоренном движении
+Так как для данный с лаб простое соединение вряд ли подойдет, то в пакете есть разные апроксиматоры Для примера можно
+взять зависимость координаты от рвемени при равноускоренном движении
 
 ```
 from src.miptlabs.plotter import pretty_plot, show
