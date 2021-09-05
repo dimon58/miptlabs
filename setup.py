@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='miptlabs',
-    version='1.0.5',
+    version='1.0.6',
     author="Dmitry",
     description="The package will help MIPT students to draw graphs easier",
     long_description=long_description,

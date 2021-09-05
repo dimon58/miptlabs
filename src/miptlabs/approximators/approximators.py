@@ -188,6 +188,82 @@ class Polynomial(Approximator):
         return f"${yvar} = {res}$"
 
 
+class Linear(Polynomial):
+    """
+    Апроксимация с помощью прямой y=kx+b
+    Получаемая функция
+    """
+
+    def __init__(self, points=100, left_offset=5, right_offset=5):
+        """
+        :param deg: степень апроскимируещего полинома
+        :param points: количество точек, которые будут на выходе
+        :param left_offset: отступ от левой гриницы диапозона
+        :param right_offset: отступ от правой гриницы диапозона
+        """
+        super(Linear, self).__init__(1, points, left_offset, right_offset)
+        # Данные
+        self._x: np.ndarray = np.array([])
+        self._y: np.ndarray = np.array([])
+        self.__k = None
+        self.__b = None
+
+    def approximate(self, x, y):
+        self._x = np.array(x)
+        self._y = np.array(y)
+        return super(Linear, self).approximate(x, y)
+
+    def _brac_x(self):
+        return self._x.mean()
+
+    def _brac_y(self):
+        return self._y.mean()
+
+    def _brac_x2(self):
+        return (self._x * self._x).mean()
+
+    def _brac_y2(self):
+        return (self._y * self._y).mean()
+
+    def _brac_xy(self):
+        return (self._x * self._y).mean()
+
+    def _d_xy(self):
+        return (self._x - self._x.mean()).mean() * (self._y - self._y.mean()).mean()
+
+    def _d_xx(self):
+        return np.square(self._x - self._x.mean()).mean()
+
+    def _d_yy(self):
+        return np.square(self._y - self._y.mean()).mean()
+
+    def _k(self):
+        self.__k = (self._brac_xy() - self._brac_x() * self._brac_y()) / (self._brac_x2() - self._brac_x() ** 2)
+        return self.__k
+
+    def _b(self):
+        if self.__k is None:
+            self._k()
+
+        self._b = self._brac_y() - self.__k * self._brac_x()
+        return self.__b
+
+    def _sigma_k(self):
+        if self.__k is None:
+            self._k()
+
+        if len(self._x) == 2:
+            return 0
+
+        return np.sqrt(np.abs((self._d_yy() / self._d_xx() - self._k() ** 2) / (len(self._x) - 2)))
+
+    def _sigma_b(self):
+        if self.__b is None:
+            self._b()
+
+        return self._sigma_k() * np.sqrt(self._brac_x2())
+
+
 class Functional(Approximator):
 
     def __init__(self, function, points=100, left_offset=5, right_offset=5):

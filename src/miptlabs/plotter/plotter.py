@@ -188,7 +188,7 @@ def pretty_plot(x, y, xerr=None, yerr=None,
 
     # Рисует легенду, если нужно
     if legend:
-        axes.legend(loc='best', fontsize=params['legend_fontsize'])
+        axes.legend(loc=params['legend_loc'], fontsize=params['legend_fontsize'])
 
     return axes
 
