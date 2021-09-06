@@ -75,7 +75,7 @@ def _update_params(params, kwargs):
                'xticks_fontsize', 'yticks_fontsize',
                'xlabel_fontsize', 'ylabel_fontsize',
                'legend_fontsize', 'title_fontsize',
-               'LEGEND_FROM_APPROXIMATOR')
+               'LEGEND_FROM_APPROXIMATOR', 'xvar', 'yvar')
 
     for target in targets:
         if target in kwargs:
@@ -172,9 +172,8 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
 
     if approximator:
         x_, y_ = approximator.approximate(x, y)
-        print(params)
+
         if params.get("LEGEND_FROM_APPROXIMATOR"):
-            print(798987657890)
             xvar = 'x'
             yvar = 'y'
 
@@ -186,7 +185,7 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
             app_label = approximator.label(xvar, yvar)
         else:
             app_label = None
-        print(app_label)
+
         axes.plot(x_, y_, c=color, label=app_label)
 
     # Рисует точки, если нужно
@@ -206,6 +205,9 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
 
     return axes
 
+
+def show_recommendations():
+    ...
 
 def pretty_plot(x, y, xerr=None, yerr=None,
                 xlabel=None, ylabel=None, title=None, legend=None,
@@ -256,6 +258,10 @@ def pretty_plot(x, y, xerr=None, yerr=None,
       размер шрифта легенды, по умолчанию 22
     * *LEGEND_FROM_APPROXIMATOR* (``int``) --
       если передано True, то рисует легенду ещё из аппроксиматора
+    * *xvar* (``str``) --
+      величина по оси x, если легенда рисуется из аппроксиматора
+    * *yvar* (``str``) --
+      величина по оси y, если легенда рисуется из аппроксиматора
     :return: объект только что нарисованного графика
     """
 
@@ -325,8 +331,12 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
       размер шрифта заголовка, по умолчанию 26
     * *legend_fontsize* (``int``) --
       размер шрифта легенды, по умолчанию 22
-    * *LEGEND_FROM_APPROXIMATOR* (``int``) --
+    * *LEGEND_FROM_APPROXIMATOR* (``bool``) --
       если передано True, то рисует легенду ещё из аппроксиматора
+    * *xvar* (``str``) --
+      величина по оси x, если легенда рисуется из аппроксиматора
+    * *yvar* (``str``) --
+      величина по оси y, если легенда рисуется из аппроксиматора
     :return: объект только что нарисованного графика
     """
 
