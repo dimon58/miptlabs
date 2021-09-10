@@ -245,7 +245,7 @@ class Linear(Polynomial):
         if self.__k is None:
             self._k()
 
-        self._b = self._brac_y() - self.__k * self._brac_x()
+        self.__b = self._brac_y() - self.__k * self._brac_x()
         return self.__b
 
     def _sigma_k(self):
