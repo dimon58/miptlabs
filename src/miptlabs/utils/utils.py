@@ -29,8 +29,11 @@ def format_monoid(koef, first=False):
     :param first: оставлять ли знак плюс
     :return: форматированный коэффициент в латех
     """
+    if koef != 0:
+        s = str(abs(round_to_n(koef, 3)))
 
-    s = str(abs(round_to_n(koef, 3)))
+    else:
+        s = '0'
 
     # Форматирование больших по модулю степеней (числа с e в середине)
     if 'e' in s:

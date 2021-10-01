@@ -174,7 +174,7 @@ class Polynomial(Approximator):
         # форматируем коэффициент при первой степени
         monoids.append(f'{format_monoid(self.koefs[self.deg - 1])}{xvar}')
 
-        # форматируем коэффициент при нелевой степени
+        # форматируем коэффициент при нулевой степени
         monoids.append(f'{format_monoid(self.koefs[self.deg])}')
 
         # объединяем в один полином
@@ -194,7 +194,7 @@ class Linear(Polynomial):
     Получаемая функция
     """
 
-    def __init__(self, points=100, left_offset=5, right_offset=5):
+    def __init__(self, points=100, left_offset=5, right_offset=5, no_bias=False):
         """
         :param deg: степень апроскимируещего полинома
         :param points: количество точек, которые будут на выходе
@@ -202,6 +202,7 @@ class Linear(Polynomial):
         :param right_offset: отступ от правой гриницы диапозона
         """
         super(Linear, self).__init__(1, points, left_offset, right_offset)
+        self.no_bias = no_bias
         # Данные
         self._x: np.ndarray = np.array([])
         self._y: np.ndarray = np.array([])
@@ -211,7 +212,32 @@ class Linear(Polynomial):
     def approximate(self, x, y):
         self._x = np.array(x)
         self._y = np.array(y)
-        return super(Linear, self).approximate(x, y)
+
+        if not self.no_bias:
+            return super(Linear, self).approximate(x, y)
+
+        else:
+            result = scipy.optimize.curve_fit(functions.line_for_fit, x, y)
+            self.meta = result
+            self.koefs = np.array([self.meta[0][0], 0])
+            self.__k = self.meta[0][0]
+            self.__b = 0
+            xs = self._gen_x_axis_with_offset(min(x), max(x))
+            ys = functions.line(self.__k)(xs)
+            return xs, ys
+
+    def label(self, xvar='x', yvar='y'):
+        res = f'{format_monoid(self.koefs[0])}{xvar}'
+
+        if not self.no_bias:
+            res += format_monoid(self.koefs[1])
+
+        # убираем плюс при максимальной степени
+        # FIXME неоптимизированный костыль с копирование строк
+        if self.koefs[0] >= 0:
+            res = res[1:]
+
+        return f"${yvar} = {res}$"
 
     def _brac_x(self):
         return self._x.mean()

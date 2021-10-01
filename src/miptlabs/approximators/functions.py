@@ -21,3 +21,14 @@ def log(a, b, c, d):
         return a * np.log(b * x + c) + d
 
     return _inner
+
+
+def line_for_fit(x, k):
+    return k * x
+
+
+def line(k):
+    def _inner(x):
+        return k * x
+
+    return _inner
