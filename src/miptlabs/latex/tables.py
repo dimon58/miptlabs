@@ -48,7 +48,7 @@ def gen_from_dataframe(df: DataFrame, caption=None, header=None, index=False):
     # -------------caption-------------
     caption_text = ''
     if caption is not None:
-        caption_text = f'\t\\caption{{\\label{{tab:bolts}} {caption}}}\n'
+        caption_text = f'\t\\caption{{{caption}}}\n'
 
     # -------------end-------------
     table_end = f'\t\t\\end{{tabular}}\n\t\\end{{center}}\n{caption_text}\\end{{table}}'
