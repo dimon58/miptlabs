@@ -22,11 +22,11 @@ def gen_from_dataframe(df: DataFrame, caption=None, header=None, index=False):
     header_col = ''
     if header:
         header_col = f'\t\t\t\\hline\n' \
-                     f'\t\t\t\\multicolumn{{{col_count}}}{{|c|}}{{{header}}}\\\\'
+                     f'\t\t\t\\multicolumn{{{col_count}}}{{|c|}}{{{header}}}\\\\\n'
 
-    table_begin = f'\\begin{{table}}[h]\n\t\\begin{{center}}\n' \
+    table_begin = f'\\begin{{table}}[H]\n\t\\begin{{center}}\n' \
                   f'\t\t\\begin{{tabular}}{{|{index_col}{cols}}}\n' \
-                  f'{header_col}\n' \
+                  f'{header_col}' \
                   f'\t\t\t\\hline\n'
 
     # -------------body-------------

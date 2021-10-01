@@ -194,7 +194,7 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
         label = None
 
     # Рисует кресты погрешностей, если нужно
-    if xerr or yerr:
+    if xerr is not None or yerr is not None:
         axes.errorbar(x, y, fmt='none', xerr=xerr, yerr=yerr, c=color, label=label)
         label = None
 

@@ -5,6 +5,7 @@
 ```sh
 python -m pip install --upgrade build wheel
 python -m build --no-isolation
+twine upload dist/*
 ```
 
 Для установки:
