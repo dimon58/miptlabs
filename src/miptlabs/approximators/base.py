@@ -9,7 +9,6 @@ import scipy.fftpack
 import scipy.optimize
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
-from . import functions
 from ..utils import round_to_n, format_monoid
 
 
@@ -31,8 +30,19 @@ class Approximator:
         self.points = points
         self.meta = []
 
+        # Данные
+        self._x = np.array([])
+        self._y = np.array([])
+        self._xerr = np.array([])
+        self._yerr = np.array([])
+
         # Коэффициенты апроксимации
-        self.koefs = []
+        self.koefs = np.array([])
+        # Стандартное отклонение параметров
+        self.sigmas = np.array([])
+
+        # Наиболее правдоподобная функция
+        self._function = None
 
     def _gen_x_axis_with_offset(self, start, end):
         """
@@ -54,23 +64,40 @@ class Approximator:
         :param end: конец диапозона
         :return:
         """
-
-        delta = end - start
-
         return np.linspace(start, end, self.points)
 
-    def approximate(self, x, y):
+    def _prepare_before_approximation(self, x, y, xerr, yerr):
+        xerr = np.ones_like(x) * xerr
+
+        if not isinstance(yerr, np.ndarray):
+            yerr = np.ones_like(y) * yerr
+
+        self._x = np.array(x)
+        self._y = np.array(y)
+        self._xerr = xerr
+        self._yerr = yerr
+
+        return self._x, self._y, self._xerr, self._yerr
+
+    def approximate(self, x, y, xerr=0, yerr=0):
         """
         Функция апроксимации
         :param x: набор параметров оси x
         :param y: набор параметров оси y
+        :param xerr: погрешность параметров оси x
+        :param yerr: погрешность параметров оси y
         :return: набор точек на кривой апроксимации
         """
+        self._x = np.array(x)
+        self._y = np.array(y)
+        self._xerr = xerr
+        self._yerr = yerr
+
         return x, y
 
     def get_function(self):
         """Возвращает полученную функцию"""
-        return 0
+        return self._function
 
     def label(self, xvar='x', yvar='y'):
         """
@@ -81,8 +108,103 @@ class Approximator:
         """
         return f'[{self.__class__.__name__}] function with params: {self.meta}'
 
+    def calc_hi_square(self):
+        if not self._yerr.all():
+            return None
 
-class Lowess(Approximator):
+        return np.sum(np.square((self._y - self.get_function()(self._x)) / self._yerr))
+
+    def calc_quality_of_approximation(self):
+        if not self._yerr.all():
+            return None
+
+        return self.calc_hi_square() / (len(self._x) - len(self.koefs))
+
+    def is_approximation_good(self):
+        if not self._yerr.all():
+            return 'У ваших измерений по вертикальной оси нет погрешности, ' \
+                   'поэтому невозможно пользоваться методом хи-квадрат'
+
+        if len(self._x) - len(self.koefs) <= 0:
+            return 'Слишком мало точек для аппроксимации, воспользуйтесь интерполяцией'
+
+        quality_of_approximation = self.calc_quality_of_approximation()
+
+        if 0 < quality_of_approximation <= 0.5:
+            return f'Качество ваших измерений составляется {round(quality_of_approximation, 2)} <= 0.5.\n' \
+                   f'Это слишком мало, скорее всего это свидетельствуют о завышенных погрешностях.'
+
+        if 0.5 < quality_of_approximation < 2:
+            return f'Качество ваших измерений составляется {round(quality_of_approximation, 2)} ~ 1.\n' \
+                   f'Это хороший результат. Ваша теоретическая модель хорошо сходится с экспериментом.'
+
+        if 2 <= quality_of_approximation:
+            return f'Качество ваших измерений составляется {round(quality_of_approximation, 2)} >= 2.\n' \
+                   f'Это слишком много. Это свидетельствуют либо о плохом соответствии \n' \
+                   f'теории и результатов измерений, либо о заниженных погрешностях.'
+
+
+class MultiLinearMixin:
+    """
+    Добавляет возможность получить функции,
+    которая считает значения между двумя точками на прямой в результирующей аппроксимации
+
+    Полезно для аппроксиматоров, которые только двигают точки, например Lowess
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._res_x = None
+        self._res_y = None
+
+    def get_function(self):
+
+        def scalar_func(x):
+            # При выходе за область определения возбуждаем исключение
+            if x < np.min(self._x) or x > np.max(self._x):
+                raise AttributeError(
+                    f'Значение {x=} выходит за область определения [{np.min(self._x)}, {np.max(self._x)}]')
+
+            # Если есть значение в точке
+            idx = np.where(np.isclose(self._x, x))[0]
+
+            if len(idx) != 0:
+                return self._res_y[idx[0]]
+
+            # Ищем значение на прямой между двумя ближайшими по оси x точками
+            upper_bound = np.where(self._x > x)[0][0]
+            # lower_bound = np.where(self._x < x)[0][-1]
+            lower_bound = upper_bound - 1
+
+            x1 = self._res_x[lower_bound]
+            x2 = self._res_x[upper_bound]
+
+            y1 = self._res_y[lower_bound]
+            y2 = self._res_y[upper_bound]
+
+            k = (y2 - y1) / (x2 - x1)
+            return k * x + y1 - k * x1
+
+        def vector_func(x):
+            # При выходе за область определения возбуждаем исключение
+            if np.any(x < np.min(self._x)) or np.any(x > np.max(self._x)):
+                raise AttributeError(
+                    f'Одна из координат {x=} выходит за область определения [{np.min(self._x)}, {np.max(self._x)}]')
+
+            return np.array([scalar_func(_x_comp) for _x_comp in x])
+
+        def inner(x):
+            if isinstance(x, np.ndarray):
+                return vector_func(x)
+
+            else:
+                return scalar_func(x)
+
+        return inner
+
+
+class Lowess(MultiLinearMixin, Approximator):
     """
     Реализует алгоритм lowess.
     Предоставляет общий и гибкий подход для приближения двумерных данных.
@@ -102,30 +224,40 @@ class Lowess(Approximator):
         super(Lowess, self).__init__(points, left_offset, right_offset)
         self.frac = frac
 
-    def approximate(self, x, y):
+    def approximate(self, x, y, xerr=0, yerr=0):
+        x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
+
         # Нечто
         result = lowess(y, x, frac=self.frac)
 
-        return result[:, 0], result[:, 1]
+        self._res_x = result[:, 0]
+        self._res_y = result[:, 1]
+
+        return self._res_x, self._res_y
 
 
-class Fourier(Approximator):
+class Fourier(MultiLinearMixin, Approximator):
     """
     # WIP #
     Апроксимация функции с помощью преобразования фурье
     """
 
-    def approximate(self, x, y):
+    def approximate(self, x, y, xerr=0, yerr=0):
+        x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
+
         # Fourier
         x = np.array(x)
         y = np.array(y)
         w = scipy.fftpack.rfft(y)
         # f = scipy.fftpack.rfftfreq(10000, x[1] - x[0])
         spectrum = w ** 2
-        cutoff_idx = spectrum < (spectrum.max() / 50000)
+        cutoff_idx = spectrum < (spectrum.max() / 20)
         w2 = w.copy()
         w2[cutoff_idx] = 0
         y = scipy.fftpack.irfft(w2)
+
+        self._res_x = x
+        self._res_y = y
 
         return x, y
 
@@ -146,16 +278,28 @@ class Polynomial(Approximator):
         super(Polynomial, self).__init__(points, left_offset, right_offset)
         self.deg = deg
 
-    def approximate(self, x, y):
-        poly_koefs = np.polyfit(x, y, deg=self.deg, full=True)
-        self.meta = poly_koefs
-        self.koefs = poly_koefs[0]
-        poly = np.poly1d(poly_koefs[0])
-        xs = self._gen_x_axis_with_offset(min(x), max(x))
-        return xs, poly(xs)
+    def approximate(self, x, y, xerr=0, yerr=0):
 
-    def get_function(self):
-        return np.poly1d(self.koefs)
+        x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
+
+        result = np.polyfit(x, y, deg=self.deg, cov=True)
+
+        popt = result[0]
+        pcov = result[-1]
+
+        self.meta = self.meta = {
+            'popt': popt,
+            'pcov': pcov
+        }
+        self.koefs = popt
+        self.sigmas = np.sqrt(np.diag(pcov))
+
+        self._function = np.poly1d(popt)
+
+        poly = np.poly1d(popt)
+        xs = self._gen_x_axis_with_offset(min(x), max(x))
+
+        return xs, poly(xs)
 
     def label(self, xvar='x', yvar='y'):
 
@@ -188,108 +332,6 @@ class Polynomial(Approximator):
         return f"${yvar} = {res}$"
 
 
-class Linear(Polynomial):
-    """
-    Апроксимация с помощью прямой y=kx+b
-    Получаемая функция
-    """
-
-    def __init__(self, points=100, left_offset=5, right_offset=5, no_bias=False):
-        """
-        :param deg: степень апроскимируещего полинома
-        :param points: количество точек, которые будут на выходе
-        :param left_offset: отступ от левой гриницы диапозона
-        :param right_offset: отступ от правой гриницы диапозона
-        """
-        super(Linear, self).__init__(1, points, left_offset, right_offset)
-        self.no_bias = no_bias
-        # Данные
-        self._x: np.ndarray = np.array([])
-        self._y: np.ndarray = np.array([])
-        self.__k = None
-        self.__b = None
-
-    def approximate(self, x, y):
-        self._x = np.array(x)
-        self._y = np.array(y)
-
-        if not self.no_bias:
-            return super(Linear, self).approximate(x, y)
-
-        else:
-            result = scipy.optimize.curve_fit(functions.line_for_fit, x, y)
-            self.meta = result
-            self.koefs = np.array([self.meta[0][0], 0])
-            self.__k = self.meta[0][0]
-            self.__b = 0
-            xs = self._gen_x_axis_with_offset(min(x), max(x))
-            ys = functions.line(self.__k)(xs)
-            return xs, ys
-
-    def label(self, xvar='x', yvar='y'):
-        res = f'{format_monoid(self.koefs[0])}{xvar}'
-
-        if not self.no_bias:
-            res += format_monoid(self.koefs[1])
-
-        # убираем плюс при максимальной степени
-        # FIXME неоптимизированный костыль с копирование строк
-        if self.koefs[0] >= 0:
-            res = res[1:]
-
-        return f"${yvar} = {res}$"
-
-    def _brac_x(self):
-        return self._x.mean()
-
-    def _brac_y(self):
-        return self._y.mean()
-
-    def _brac_x2(self):
-        return (self._x * self._x).mean()
-
-    def _brac_y2(self):
-        return (self._y * self._y).mean()
-
-    def _brac_xy(self):
-        return (self._x * self._y).mean()
-
-    def _d_xy(self):
-        return (self._x - self._x.mean()).mean() * (self._y - self._y.mean()).mean()
-
-    def _d_xx(self):
-        return np.square(self._x - self._x.mean()).mean()
-
-    def _d_yy(self):
-        return np.square(self._y - self._y.mean()).mean()
-
-    def _k(self):
-        self.__k = (self._brac_xy() - self._brac_x() * self._brac_y()) / (self._brac_x2() - self._brac_x() ** 2)
-        return self.__k
-
-    def _b(self):
-        if self.__k is None:
-            self._k()
-
-        self.__b = self._brac_y() - self.__k * self._brac_x()
-        return self.__b
-
-    def _sigma_k(self):
-        if self.__k is None:
-            self._k()
-
-        if len(self._x) == 2:
-            return 0
-
-        return np.sqrt(np.abs((self._d_yy() / self._d_xx() - self._k() ** 2) / (len(self._x) - 2)))
-
-    def _sigma_b(self):
-        if self.__b is None:
-            self._b()
-
-        return self._sigma_k() * np.sqrt(self._brac_x2())
-
-
 class Functional(Approximator):
 
     def __init__(self, function, points=100, left_offset=5, right_offset=5):
@@ -304,95 +346,45 @@ class Functional(Approximator):
         :param right_offset: отступ от правой гриницы диапозона
         """
         super(Functional, self).__init__(points, left_offset, right_offset)
-        self.function = function
+        self._function_for_fit = function
 
-    def get_function(self):
-        """Возвращает полученную функцию"""
+    def approximate(self, x, y, xerr=0, yerr=0):
 
-        def _function(x):
-            return self.function(x, *self.koefs)
+        x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
 
-        return _function
-
-    def approximate(self, x, y):
-        # пытаемся апроксимировать. если у scipy плохо получается, то оно выбрасывает ислючение RuntimeError
+        # пытаемся аппроксимировать. если у scipy не получается, то оно выбрасывает исключение RuntimeError
         try:
-            self.meta = scipy.optimize.curve_fit(self.function, x, y)
-            self.koefs = self.meta[0]
+            popt, pcov = scipy.optimize.curve_fit(
+                f=self._function_for_fit, xdata=x, ydata=y, sigma=yerr)
+            perr = np.sqrt(np.diag(pcov))
+
+            self.meta = {
+                'popt': popt,
+                'pcov': pcov
+            }
+
+            self.koefs = popt
+            self.sigmas = perr
+
+            def fff(*params):
+                def inner(xx):
+                    return self._function_for_fit(xx, *params)
+
+                return inner
+
+            self._function = fff(*self.koefs)
+
             xs = self._gen_x_axis_with_offset(min(x), max(x))
-            ys = self.function(xs, *self.koefs)
+            ys = self._function_for_fit(xs, *self.koefs)
             return xs, ys
+
         except RuntimeError:
             # Если вызывается исключение, то возвращаем исходные данные
-            warn(f"Точки плохо подходят под апроксимацию выбранной функцией {self.function.__name__}")
+            warn(f"Точки плохо подходят под апроксимацию выбранной функцией {self._function.__name__}")
             return x, y
 
     def label(self, xvar='x', yvar='y'):
         try:
             return f'function with params: {[round_to_n(param, 3) for param in self.koefs]}'
         except IndexError:
-            return f'Функция {self.function.__name__}, которая плохо подходит'
-
-
-class Exponential(Approximator):
-    """
-    Экспоненциальный апроксиматор
-    y = a*exp(bx)+c
-    """
-
-    def approximate(self, x, y):
-        # пытаемся апроксимировать. если у scipy плохо получается, то оно выбрасывает ислючение RuntimeError
-        try:
-            result = scipy.optimize.curve_fit(functions.exp_for_fit, x, y)
-            self.meta = result
-            self.koefs = self.meta[0]
-            xs = self._gen_x_axis_with_offset(min(x), max(x))
-            ys = functions.exp(*result[0])(xs)
-            return xs, ys
-        except RuntimeError:
-            # Если вызывается исключение, то возвращаем исходные данные
-            warn("Точки плохо подходят под апроксимацию экспоненйиальной функцией")
-            return x, y
-
-    def label(self, xvar='x', yvar='y'):
-        try:
-            return f'${yvar} = {format_monoid(round_to_n(self.koefs[0], 3), True)}' \
-                   f'e^{{{round_to_n(self.koefs[1], 3)}{xvar}}} ' \
-                   f'{format_monoid(round_to_n(self.koefs[2], 3))}$'
-        except TypeError:
-            return 'Экспонента, которая не смогла'
-
-
-class Logarithmic(Approximator):
-    """
-    Логарифмический апроксиматор
-    y = a * ln(bx + c) + d
-    """
-
-    def approximate(self, x, y):
-        # пытаемся апроксимировать. если у scipy плохо получается, то оно выбрасывает ислючение RuntimeError
-        try:
-            result = scipy.optimize.curve_fit(functions.log_for_fit, x, y)
-            self.meta = result
-            self.koefs = self.meta[0]
-            xs = self._gen_x_axis_with_offset(min(x), max(x))
-            ys = functions.log(*result[0])(xs)
-
-            return xs, ys
-
-        except RuntimeError as e:
-            # Если вызывается исключение, то возвращаем исходные данные
-            warn("Точки плохо подходят под апроксимацию логирифмической функцией")
-            return x, y
-
-    def label(self, xvar='x', yvar='y'):
-
-        try:
-
-            return f'${format_monoid(round_to_n(self.koefs[0], 3), True)}\ln{{(' \
-                   f'{format_monoid(round_to_n(self.koefs[1], 3), True)}x ' \
-                   f'{format_monoid(round_to_n(self.koefs[2], 3))})}} ' \
-                   f'{format_monoid(round_to_n(self.koefs[3], 3))}$'
-
-        except IndexError:
-            return 'Логарифм, который не смог'
+            return f'Функция {self._function.__name__}, которая плохо подходит'
