@@ -9,16 +9,15 @@ from ..utils import round_to_n, format_monoid
 
 class Linear(Polynomial):
     """
-    Апроксимация с помощью прямой y=kx+b
-    Получаемая функция
+    Аппроксимация с помощью прямой y=kx+b. Использует numpy.polyfit
     """
 
     def __init__(self, points=100, left_offset=5, right_offset=5, no_bias=False):
         """
-        :param deg: степень апроскимируещего полинома
         :param points: количество точек, которые будут на выходе
-        :param left_offset: отступ от левой гриницы диапозона
-        :param right_offset: отступ от правой гриницы диапозона
+        :param left_offset: отступ  от правой границы диапазона
+        :param right_offset: отступ, то свободного коэффициента нет, иначе есть
+        :param no_bias: Если *True* от левой границы диапазона
         """
         super(Linear, self).__init__(1, points, left_offset, right_offset)
         self.no_bias = no_bias
@@ -125,6 +124,11 @@ class Exponential(Functional):
     """
 
     def __init__(self, points=100, left_offset=5, right_offset=5):
+        """
+        :param points: количество точек, которые будут на выходе
+        :param left_offset: отступ  от правой границы диапазона
+        :param right_offset: отступ, то свободного коэффициента нет, иначе есть
+        """
         super(Exponential, self).__init__(
             function=functions.exp_for_fit,
             points=points,
@@ -148,6 +152,11 @@ class Logarithmic(Functional):
     """
 
     def __init__(self, points=100, left_offset=5, right_offset=5):
+        """
+        :param points: количество точек, которые будут на выходе
+        :param left_offset: отступ  от правой границы диапазона
+        :param right_offset: отступ, то свободного коэффициента нет, иначе есть
+        """
         super(Logarithmic, self).__init__(
             function=functions.log_for_fit,
             points=points,
