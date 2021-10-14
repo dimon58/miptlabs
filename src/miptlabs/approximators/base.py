@@ -14,8 +14,11 @@ from ..utils import round_to_n, format_monoid
 class Approximator:
     """
     Базовый класс апроксиматор.
-    Классы нужны, чтобы сохранять разные данные, во время апроксимации. Напрмер коэффициенты, ошибки.
-    Для некоторых позволяют гененрировать формулу в латехе
+
+    Классы нужны, чтобы сохранять разные данные, во время аппроксимации. Например коэффициенты, ошибки.
+    Возможно когда-нибудь будет сделан класс для результата аппроксимации
+
+    Для некоторых позволяют генерировать формулу в латехе
     """
 
     def __init__(self, points=100, left_offset=5, right_offset=5):
@@ -42,6 +45,36 @@ class Approximator:
 
         # Наиболее правдоподобная функция
         self._function = None
+
+    def __init_subclass__(cls, **kwargs):
+        """
+        Костыльное добавление документации к классам наследникам
+        """
+        super().__init_subclass__(**kwargs)
+
+        if not cls.__init__.__doc__:
+            return
+
+        if not cls.__doc__:
+            cls.__doc__ = cls.__init__.__doc__
+            return
+
+        # для совместимости со старыми питонами
+        def remove_pref(s: str, pref: str):
+            if s.startswith(pref):
+                return s[len(pref):]
+
+            return s
+
+        cls.__doc__ = '{}\n{}'.format(
+            cls.__doc__,
+            '\n'.join(
+                [
+                    remove_pref(remove_pref(line, '\t'), ' ' * 4)
+                    for line in cls.__init__.__doc__.split('\n')
+                ]
+            )
+        )
 
     def _gen_x_axis_with_offset(self, start, end):
         """
@@ -81,10 +114,12 @@ class Approximator:
     def approximate(self, x, y, xerr=0, yerr=0):
         """
         Функция апроксимации
+
         :param x: набор параметров оси x
         :param y: набор параметров оси y
         :param xerr: погрешность параметров оси x
         :param yerr: погрешность параметров оси y
+
         :return: набор точек на кривой апроксимации
         """
         self._x = np.array(x)
@@ -95,31 +130,69 @@ class Approximator:
         return x, y
 
     def get_function(self):
-        """Возвращает полученную функцию"""
+        """Возвращает полученную после аппроксимации функцию"""
         return self._function
 
     def label(self, xvar='x', yvar='y'):
         """
         Генерирует формулу для латеха
+
         :param xvar: буква перемонной по оси x
         :param yvar: буква перемонной по оси y
-        :return: сгенерированную формулу
+
+        :return: сгенерированная формулу
         """
         return f'[{self.__class__.__name__}] function with params: {self.meta}'
 
     def calc_hi_square(self):
+        """
+        Вычисляет chi^2
+        """
+
         if not self._yerr.all():
             return None
 
         return np.sum(np.square((self._y - self.get_function()(self._x)) / self._yerr))
 
     def calc_quality_of_approximation(self):
+        """
+        Вычисляет chi^2 / (n - p)
+
+        - n - количество точек в данных
+        - p - количество степеней свободы (кол-во параметров в функции, которой аппроксимируем)
+        """
+
         if not self._yerr.all():
             return None
 
         return self.calc_hi_square() / (len(self._x) - len(self.koefs))
 
     def is_approximation_good(self):
+        """
+        Делает оценочное суждение по поводу качества измерений
+
+        quality_of_approximation = calc_quality_of_approximation = chi^2 / (n - p)
+
+        - 0 < quality_of_approximation <= 0.5:
+
+            Качество ваших измерений составляется quality_of_approximation <= 0.5.
+
+            Это слишком мало, скорее всего это свидетельствуют о завышенных погрешностях
+
+        - 0.5 < quality_of_approximation < 2:
+
+            Качество ваших измерений составляется quality_of_approximation ~ 1.
+
+            Это хороший результат. Ваша теоретическая модель хорошо сходится с экспериментом.
+
+        - 2 <= quality_of_approximation:
+
+            Качество ваших измерений составляется quality_of_approximation >= 2.
+
+            Это слишком много. Это свидетельствуют либо о плохом соответствии
+            теории и результатов измерений, либо о заниженных погрешностях.
+
+        """
         if not self._yerr.all():
             return 'У ваших измерений по вертикальной оси нет погрешности, ' \
                    'поэтому невозможно пользоваться методом хи-квадрат'
@@ -139,7 +212,7 @@ class Approximator:
 
         if 2 <= quality_of_approximation:
             return f'Качество ваших измерений составляется {round(quality_of_approximation, 2)} >= 2.\n' \
-                   f'Это слишком много. Это свидетельствуют либо о плохом соответствии \n' \
+                   f'Это слишком много. Это свидетельствуют либо о плохом соответствии ' \
                    f'теории и результатов измерений, либо о заниженных погрешностях.'
 
 
@@ -205,8 +278,7 @@ class MultiLinearMixin:
 
 class Polynomial(Approximator):
     """
-    Апроксимация с помощью полинома
-    Получаемая функция
+    Аппроксимация с помощью полинома. Использует numpy.polyfit
     """
 
     def __init__(self, deg=1, points=100, left_offset=5, right_offset=5):
@@ -274,17 +346,37 @@ class Polynomial(Approximator):
 
 
 class Functional(Approximator):
+    """
+    Аппроксимация с помощью пользовательской функции. Использует scipy.optimize.curve_fit
+
+
+    Функция должна иметь следующую сигнатуру:
+
+    .. code:: python
+
+        def function_for_fit(x, param1, param2, ..., paramn):
+            ...
+
+    x - переменная
+
+    param1, param2, ..., paramn - параметры, которые будут искаться
+
+    Например:
+
+    .. code:: python
+
+            def exp(x, a, b, c):
+                return a * np.exp(b * x) + c
+
+    У этой функции будут определяться параметры a, b, c
+    """
 
     def __init__(self, function, points=100, left_offset=5, right_offset=5):
         """
-        :param function: функция для апроксимации
-        Должна быть в виде f(x, *params), где x - переменная, params - параметры для подгона. например
-            def exp(x, a, b, c):
-                return a * np.exp(b * x) + c
-        У этой функции будут определяться параметры a, b, c
+        :param function: функция для аппроксимации
         :param points: количество точек, которые будут на выходе
-        :param left_offset: отступ от левой гриницы диапозона
-        :param right_offset: отступ от правой гриницы диапозона
+        :param left_offset: отступ от левой границы диапазона
+        :param right_offset: отступ от правой границы диапазона
         """
         super(Functional, self).__init__(points, left_offset, right_offset)
         self._function_for_fit = function

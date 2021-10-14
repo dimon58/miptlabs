@@ -3,12 +3,12 @@ from matplotlib.figure import Figure
 
 
 class NothingDrawError(Exception):
+    """
+    Исключение, возбуждаемое, когда невозможно ничего нарисовать на графике.
+    """
+
     def __init__(self, text):
         self.txt = text
-
-
-class LEGEND_FROM_APPROXIMATOR:
-    ...
 
 
 def _make_tuples_from_none(*tuples, length=1):
@@ -206,9 +206,6 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
     return axes
 
 
-def show_recommendations():
-    ...
-
 def pretty_plot(x, y, xerr=None, yerr=None,
                 xlabel=None, ylabel=None, title=None, legend=None,
                 minor_ticks=True, color=None, points=True, line=False,
@@ -216,28 +213,50 @@ def pretty_plot(x, y, xerr=None, yerr=None,
     """
     Рисует график, с требованиями лабников.
     По умолчания не соединяет точки
+
+    Без доп настроек можно рассчитывать на это
+
+    .. figure:: _static/images/base.png
+        :scale: 50 %
+        :align: center
+        :alt: Простой пример
+
     TODO: пока не умеет выносить степень. в будущем это появится.
+
     TODO: может поменяться интерфейс
-    для отображения можно искользовать:
-    matplotlib.pyplot.show(), или pretty_plot(...).figure.show(), или show(), определнный ниже
-    для сохранения можно использовать:
-    matplotlib.pyplot.savefig(filename), или pretty_plot(...).figure.savefig(filename), или savefig(fig, filename), определнный ниже
+
+    **Для отображения можно использовать:**
+
+    - matplotlib.pyplot.show()
+    - pretty_plot(...).figure.show()
+    - show() (определён ниже)
+
+    **Для сохранения графика в картинку можно использовать:**
+
+    - matplotlib.pyplot.savefig(filename)
+    - pretty_plot(...).figure.savefig(filename)
+    - savefig(fig, filename) (определён ниже)
+
     :param x: координаты по оси x
     :param y: координаты по оси y
-    :param xerr: погрешности по оси x. Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
-    :param yerr: погрешности по оси y. Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
+    :param xerr: погрешности по оси x.
+        Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
+    :param yerr: погрешности по оси y.
+        Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
     :param xlabel: подпись по оси x
     :param ylabel: подпись по оси y
     :param title: название графика
     :param legend: легенда
-    :param minor_ticks: нужна ли впсомогательная сетка
+    :param minor_ticks: нужна ли вспомогательная сетка
     :param color: цвет графика. Если None, то будет синий
-    :param points: нужно ли рисвоать точки
+    :param points: нужно ли рисовать точки
     :param line: нужно ли соединить ломаной все точки
-    :param axes: объект графика. Можно ппередать, чтобы дорисовать всё на существующем графике
+    :param axes: объект графика. Можно передать, чтобы дорисовать всё на существующем графике
     :param approximator: аппроксиматор для точек, должен быть экземпляром класса Approximator
-    :param kwargs: дополнительные агрменты:
-    :Keyword Arguments:
+    :param kwargs: дополнительные аргументы
+
+    :Дополнительные параметры:
+
     * *figsize* (``tuple[int]``) --
       размер графика в дюймах, по умолчанию 10 на 8
     * *dpi* (``int``) --
@@ -262,7 +281,8 @@ def pretty_plot(x, y, xerr=None, yerr=None,
       величина по оси x, если легенда рисуется из аппроксиматора
     * *yvar* (``str``) --
       величина по оси y, если легенда рисуется из аппроксиматора
-    :return: объект только что нарисованного графика
+
+    :return: экземпляр класса matplotlib.Axes - объект только что нарисованного графика
     """
 
     # ----------------Инициализация----------------
@@ -295,12 +315,16 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
                      minor_ticks=True, colors=None, points=True, line=False,
                      axes=None, approximator=None, **kwargs):
     r"""
+    Рисует график так же, как и pretty_plot,
+    только вместо x, y передаётся два списка с наборами координат,
+    что позволяет сразу отрисовать несколько графиков
+
     :param xs: наборы координат по оси x
     :param ys: наборы координат по оси y
     :param xerrs: наборы погрешностей по оси x.
-    Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
+        Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
     :param yerrs: наборы погрешностей по оси y.
-    Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
+        Либо одно число (применится к все точкам), либо список (применится к соответсвующей точке).
     :param xlabel: наборы подписей по оси x
     :param ylabel: наборы подписей по оси y
     :param title: название графика
@@ -312,7 +336,9 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
     :param axes: объект графика. Можно передать, чтобы дорисовать всё на существующем графике
     :param approximator: аппроксиматор для точек, должен быть экземпляром класса Approximator
     :param kwargs: дополнительные агрменты:
-    :Keyword Arguments:
+
+    :Дополнительные параметры:
+
     * *figsize* (``tuple[int]``) --
       размер графика в дюймах, по умолчанию 10 на 8
     * *dpi* (``int``) --
@@ -337,7 +363,8 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
       величина по оси x, если легенда рисуется из аппроксиматора
     * *yvar* (``str``) --
       величина по оси y, если легенда рисуется из аппроксиматора
-    :return: объект только что нарисованного графика
+
+    :return: экземпляр класса matplotlib.Axes - объект только что нарисованного графика
     """
 
     # ----------------Инициализация----------------
@@ -372,9 +399,10 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
 def show(*args, **kwargs):
     """
     Рисует все сгенерированные графики. По-сути обертка над matplotlib.pyplot.show
-    :param args:
-    :param kwargs:
-    :return:
+
+    Подробнее в `документации matplotlib`_
+
+    .. _`документации matplotlib`: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.show.html
     """
     return plt.show(*args, **kwargs)
 
@@ -382,11 +410,19 @@ def show(*args, **kwargs):
 def savefig(obj, filename, *, transparent=None, **kwargs):
     """
     Сохраняет фигуру. По-сути обертка над встроенной функцие сохранения
-    :param obj:
-    :param filename:
-    :param transparent:
-    :param kwargs:
-    :return:
+
+    :param obj: экземпляр класса Axes или Figure из matplotlib. Его же возвращают функции pretty_plot и pretty_plot_many
+    :param filename: имя файла, в который нужно сохранить. Если передан без расширения, то сохраниться в png.
+    :param transparent: If *True*, the axes patches will all be transparent; the
+            figure patch will also be transparent unless facecolor
+            and/or edgecolor are specified via kwargs.
+            This is useful, for example, for displaying
+            a plot on top of a colored background on a web page.  The
+            transparency of these patches will be restored to their
+            original values upon exit of this function.
+    :param kwargs: дополнительные параметры. Смотри `документацию matplotlib`_
+
+    .. _`документацию matplotlib`: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html
     """
     figure = obj if isinstance(obj, Figure) else obj.figure
 

@@ -3,12 +3,17 @@ from pandas import DataFrame
 
 def gen_from_dataframe(df: DataFrame, caption=None, header=None, index=False):
     """
-    Генерирует таблицу из DataFame
+    Генерирует таблицу latex из DataFame.
+    Нужно лишь дописать свой заголовок таблицы (хотя можно оставить сгенерированный)
+
+    По умолчанию в заголовке находятся имена столбцов из pandas.
+
     :param df: dataframe из pandas
     :param caption: название таблицы
     :param header: заголовок таблицы, располагается сверху всех строк и размером со все столбцы
     :param index: нужна ли индексация
-    :return:
+
+    :return: строку, содержащую таблицу latex, которую можно вставить в редактор
     """
     col_count = len(df.columns)
 
