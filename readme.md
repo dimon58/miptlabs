@@ -1,3 +1,6 @@
+[![Documentation Status](https://readthedocs.org/projects/miptlabs/badge/?version=latest)](https://miptlabs.readthedocs.io/ru/latest/?badge=latest)
+
+
 # Длинное описание, которое когда-то появится #
 
 Для сборки:

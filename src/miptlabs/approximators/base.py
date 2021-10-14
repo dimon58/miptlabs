@@ -236,7 +236,7 @@ class MultiLinearMixin:
             # При выходе за область определения возбуждаем исключение
             if x < np.min(self._x) or x > np.max(self._x):
                 raise AttributeError(
-                    f'Значение {x=} выходит за область определения [{np.min(self._x)}, {np.max(self._x)}]')
+                    f'Значение x={x} выходит за область определения [{np.min(self._x)}, {np.max(self._x)}]')
 
             # Если есть значение в точке
             idx = np.where(np.isclose(self._x, x))[0]
@@ -262,7 +262,7 @@ class MultiLinearMixin:
             # При выходе за область определения возбуждаем исключение
             if np.any(x < np.min(self._x)) or np.any(x > np.max(self._x)):
                 raise AttributeError(
-                    f'Одна из координат {x=} выходит за область определения [{np.min(self._x)}, {np.max(self._x)}]')
+                    f'Одна из координат x={x} выходит за область определения [{np.min(self._x)}, {np.max(self._x)}]')
 
             return np.array([scalar_func(_x_comp) for _x_comp in x])
 
