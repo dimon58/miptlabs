@@ -21,7 +21,7 @@ project = 'miptlabs'
 copyright = '2021, Dmitry Sharonov'
 author = 'Dmitry Sharonov'
 version = '1.0'
-release = '1.0.13'
+release = '1.0.14'
 
 # -- General configuration ---------------------------------------------------
 

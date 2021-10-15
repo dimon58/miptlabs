@@ -171,7 +171,7 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
     label = legend
 
     if approximator:
-        x_, y_ = approximator.approximate(x, y)
+        x_, y_ = approximator.approximate(x, y, xerr, yerr)
 
         if params.get("LEGEND_FROM_APPROXIMATOR"):
             xvar = 'x'
