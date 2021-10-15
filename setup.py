@@ -16,6 +16,7 @@ setuptools.setup(
     url="https://github.com/dimon58/miptlabs",
     project_urls={
         "Bug Tracker": "https://github.com/dimon58/miptlabs/issues",
+        "Documentation": "https://miptlabs.readthedocs.io/",
     },
     data_files=[
         'readme.md',
