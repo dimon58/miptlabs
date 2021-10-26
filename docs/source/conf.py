@@ -12,8 +12,10 @@
 #
 import os
 import sys
-
 sys.path.insert(0, os.path.abspath('../../src'))
+
+from miptlabs import __version__
+
 
 # -- Project information -----------------------------------------------------
 
@@ -21,7 +23,7 @@ project = 'miptlabs'
 copyright = '2021, Dmitry Sharonov'
 author = 'Dmitry Sharonov'
 version = '1.0'
-release = '1.0.14'
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 

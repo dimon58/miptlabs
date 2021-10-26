@@ -1,4 +1,10 @@
+import os
+import sys
+
 import setuptools
+
+sys.path.insert(0, os.path.abspath('.'))
+from src.miptlabs import __version__
 
 with open("readme.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -8,7 +14,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='miptlabs',
-    version='1.0.14',
+    version=__version__,
     author="Dmitry",
     description="The package will help MIPT students to draw graphs easier",
     long_description=long_description,

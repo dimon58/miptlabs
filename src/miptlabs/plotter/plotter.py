@@ -11,14 +11,14 @@ class NothingDrawError(Exception):
         self.txt = text
 
 
-def _make_tuples_from_none(*tuples, length=1):
+def _make_tuples_from_filler(*tuples, length=1, filler=None):
     """
-    Делает из None кортеж длиной length, если передан не None, то оставляет его, как есть
+    Делает из filler кортеж длиной length, если передан не None, то оставляет его, как есть
     """
     result = []
     for tuple_ in tuples:
         if tuple_ is None:
-            result.append(tuple([None] * length))
+            result.append(tuple([filler] * length))
 
         else:
             result.append(tuple_)
@@ -206,7 +206,7 @@ def _draw(axes, x, y, xerr, yerr, color, legend, points, line, approximator, par
     return axes
 
 
-def pretty_plot(x, y, xerr=None, yerr=None,
+def pretty_plot(x, y, xerr=0, yerr=0,
                 xlabel=None, ylabel=None, title=None, legend=None,
                 minor_ticks=True, color=None, points=True, line=False,
                 axes=None, approximator=None, **kwargs):
@@ -382,8 +382,9 @@ def pretty_plot_many(xs, ys, xerrs=None, yerrs=None,
         kwargs=kwargs
     )
 
-    # Создаём кортежы из None длины = количеству графиков
-    legends, colors, xerrs, yerrs = _make_tuples_from_none(legends, colors, xerrs, yerrs)
+    # Создаём кортежы из None или нулей длины = количеству графиков
+    legends, colors = _make_tuples_from_filler(legends, colors)
+    xerrs, yerrs = _make_tuples_from_filler(xerrs, yerrs, filler=0)
 
     # ----------------Рисование----------------
     for num, (x, y, xerr, yerr, legend, color) in enumerate(zip(xs, ys, xerrs, yerrs, legends, colors)):

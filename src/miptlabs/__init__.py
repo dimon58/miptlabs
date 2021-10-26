@@ -1,3 +1,3 @@
 from . import approximators, interpolators, plotter, utils, latex
 
-__version__ = '1.0.14'
+__version__ = '1.0.15'
