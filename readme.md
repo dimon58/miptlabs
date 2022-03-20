@@ -6,7 +6,8 @@
 Для сборки:
 
 ```sh
-python -m pip install --upgrade build wheel
+python -m pip install --upgrade build wheel twine
+python -m pip install -r requirements.txt
 python -m build --no-isolation
 twine upload dist/*
 ```
