@@ -31,7 +31,7 @@ class Linear(Polynomial):
         x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
 
         if not self.no_bias:
-            return super(Linear, self).approximate(x, y)
+            return super(Linear, self).approximate(x, y, xerr, yerr)
 
         else:
             # fixme: убрать дублирование кода
@@ -158,6 +158,38 @@ class Logarithmic(Functional):
         :param right_offset: отступ, то свободного коэффициента нет, иначе есть
         """
         super(Logarithmic, self).__init__(
+            function=functions.log_for_fit,
+            points=points,
+            left_offset=left_offset,
+            right_offset=right_offset
+        )
+
+    def label(self, xvar='x', yvar='y'):
+
+        try:
+
+            return f'${format_monoid(round_to_n(self.koefs[0], 3), True)}\ln{{(' \
+                   f'{format_monoid(round_to_n(self.koefs[1], 3), True)}x ' \
+                   f'{format_monoid(round_to_n(self.koefs[2], 3))})}} ' \
+                   f'{format_monoid(round_to_n(self.koefs[3], 3))}$'
+
+        except IndexError:
+            return 'Логарифм, который не смог'
+
+
+class TANH(Functional):
+    """
+    Логарифмический апроксиматор
+    y = a * ln(bx + c) + d
+    """
+
+    def __init__(self, points=100, left_offset=5, right_offset=5):
+        """
+        :param points: количество точек, которые будут на выходе
+        :param left_offset: отступ  от правой границы диапазона
+        :param right_offset: отступ, то свободного коэффициента нет, иначе есть
+        """
+        super(TANH, self).__init__(
             function=functions.log_for_fit,
             points=points,
             left_offset=left_offset,

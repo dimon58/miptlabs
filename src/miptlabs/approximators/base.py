@@ -99,7 +99,8 @@ class Approximator:
         return np.linspace(start, end, self.points)
 
     def _prepare_before_approximation(self, x, y, xerr, yerr):
-        xerr = np.ones_like(x) * xerr
+        if not isinstance(xerr, np.ndarray):
+            xerr = np.ones_like(y) * xerr
 
         if not isinstance(yerr, np.ndarray):
             yerr = np.ones_like(y) * yerr
@@ -295,7 +296,7 @@ class Polynomial(Approximator):
 
         x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
 
-        result = np.polyfit(x, y, deg=self.deg, cov=True)
+        result = np.polyfit(x, y, w=1 / yerr, deg=self.deg, cov=True)
 
         popt = result[0]
         pcov = result[-1]
@@ -381,7 +382,7 @@ class Functional(Approximator):
         super(Functional, self).__init__(points, left_offset, right_offset)
         self._function_for_fit = function
 
-    def approximate(self, x, y, xerr=0, yerr=0):
+    def approximate(self, x, y, xerr=None, yerr=None):
 
         x, y, xerr, yerr = self._prepare_before_approximation(x, y, xerr, yerr)
 

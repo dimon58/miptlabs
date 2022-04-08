@@ -22,10 +22,13 @@ def represent_value(name, val=None, sigma=None, eps=None, units='', n=-1):
     if val is not None and sigma is not None and eps is not None and val * eps != sigma:
         raise ValueError(f'У величины {name} переданы некорректные значения')
 
+    if units:
+        units = f' \\; {units}'
+
     # Проверка, что есть пара не None
     if sigma is None and eps is None:
         print(f'WARNING!!! У величины {name} передано только значение.')
-        return f'$ {name} = {round(val, n) if n != -1 else n} {units}$'
+        return f'$ {name} = {round(val, n) if n != -1 else n}{units}$'
 
     if val is None and eps is None:
         raise ValueError(f'У величины {name} передана, только абсолютная погрешность')
@@ -35,10 +38,10 @@ def represent_value(name, val=None, sigma=None, eps=None, units='', n=-1):
 
     # Далее форматирование
     if eps is None and val != 0:
-        eps = sigma / val
+        eps = abs(sigma / val)
 
     if sigma is None:
-        sigma = val * eps
+        sigma = abs(val * eps)
 
     if val is None:
         if eps == 0:
@@ -49,7 +52,8 @@ def represent_value(name, val=None, sigma=None, eps=None, units='', n=-1):
                 raise ValueError(f'У величины {name} переданы только погрешности, при чем относительная и '
                                  f'абсолютная равна нулю одновременно, получается неопределенность')
         else:
-            print(f'WARNING!!! У величины {name} переданы только погрености, но не сама величина. Это странно.')
+            print(f'WARNING!!! У величины {name} переданы только погрености, но не сама величина. '
+                  f'Будет вычислено с точностью до знака Это странно.')
             val = sigma / eps
 
     if n != -1:
@@ -59,7 +63,7 @@ def represent_value(name, val=None, sigma=None, eps=None, units='', n=-1):
 
     else:
         val_ = val
-        sigma_ = sigma
+        sigma_ = sigma * 100
         eps_ = eps
 
-    return f'$ {name} = {val_} \\pm {sigma_} {units}, \\; \\varepsilon_{{{name}}} = {eps_} \\% $'
+    return f'$ {name} = {val_} \\pm {sigma_}{units}, \\; \\varepsilon_{{{name}}} = {eps_} \\% $'
