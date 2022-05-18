@@ -63,7 +63,7 @@ def represent_value(name, val=None, sigma=None, eps=None, units='', n=-1):
 
     else:
         val_ = val
-        sigma_ = sigma * 100
+        sigma_ = sigma
         eps_ = eps * 100
 
     return f'$ {name} = {val_} \\pm {sigma_}{units}, \\; \\varepsilon_{{{name}}} = {eps_} \\% $'
